@@ -61,8 +61,8 @@ public class Livro {
         this.autor = autor;
     }
 
-    public static void consultarLivros() {
-
+    public static List<Livro> consultarLivros() {
+        List<Livro> listaLivros = new ArrayList<>();
         try {
             String apiUrl = "http://localhost:8080/livros";
 
@@ -88,8 +88,6 @@ public class Livro {
             // Converte a resposta para um array de objetos JSON
             JsonArray jsonArray = new Gson().fromJson(response.toString(), JsonArray.class);
 
-            // Cria uma lista para armazenar os objetos Livro
-            List<Livro> listaLivros = new ArrayList<>();
 
             // Itera sobre os objetos do array e adiciona-os à lista
             for (JsonElement elemento : jsonArray) {
@@ -125,5 +123,6 @@ public class Livro {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return listaLivros;
     }
 }
