@@ -1,13 +1,8 @@
 package org.example;
 
 import org.example.Livro;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.JButton;
-import javax.swing.ScrollPaneConstants;
+
+import javax.swing.*;
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -15,30 +10,44 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import static org.example.Livro.consultarLivros;
+import static org.example.Livro.consultarLivrosPorTitulo;
 
 public class Main extends JFrame {
-    private JTextArea textArea;
+    private static JTextField txtFiltro;
+    private static JButton btnFiltrar;
+    private static JTextArea textArea;
 
     public Main() {
-        setTitle("Lista de Livros");
-        setSize(400, 400);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JFrame frame = new JFrame("Livros");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(400, 400);
 
-        JLabel label = new JLabel("Lista de Livros");
-        label.setFont(new Font("Arial", Font.BOLD, 16));
-        add(label, BorderLayout.NORTH);
+        // Painel principal com BorderLayout
+        JPanel panel = new JPanel(new BorderLayout());
 
+        // Painel para o campo de texto e botão
+        JPanel filterPanel = new JPanel(new BorderLayout());
 
-       JTextField txtFiltro = new JTextField();
-        JButton btnFiltrar = new JButton("Filtrar");
+        txtFiltro = new JTextField();
+        btnFiltrar = new JButton("Filtrar");
+
+        // Adicionar o campo de texto e botão ao painel de filtro
+        filterPanel.add(txtFiltro, BorderLayout.CENTER);
+        filterPanel.add(btnFiltrar, BorderLayout.EAST);
+
+        // Adicionar o painel de filtro ao painel principal no norte
+        panel.add(filterPanel, BorderLayout.NORTH);
+
         textArea = new JTextArea();
-        textArea.setFont(new Font("Arial", Font.PLAIN, 12));
-
         JScrollPane scrollPane = new JScrollPane(textArea);
-        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-        add(txtFiltro, BorderLayout.NORTH);
-        add(btnFiltrar, BorderLayout.WEST);
-        add(scrollPane, BorderLayout.CENTER);
+
+        // Adicionar a área de texto com barra de rolagem ao painel principal no centro
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Adicionar o painel principal ao frame
+        frame.add(panel);
+
+
 
         // Adiciona um listener para o botão de filtrar
 
@@ -50,6 +59,7 @@ public class Main extends JFrame {
             }
         });
 
+        frame.setVisible(true);
     }
 
     public void exibirLivros(List<Livro> livros) {
