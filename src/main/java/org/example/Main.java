@@ -1,26 +1,28 @@
 package org.example;
 
-import org.example.Livro;
-
 import javax.swing.*;
-import java.awt.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
+
 import static org.example.Livro.consultarLivros;
-import static org.example.Livro.consultarLivrosPorTitulo;
 
 public class Main extends JFrame {
+    private List<Livro> listaLivros;
+    private JList<String> livrosList;
+    private DefaultListModel<String> livrosListModel;
     private static JTextField txtFiltro;
     private static JButton btnFiltrar;
-    private static JList<String> list;
-    private static DefaultListModel<String> listModel;
+    private JTextArea textArea;
 
     public Main() {
         JFrame frame = new JFrame("Livros");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 800);
+        frame.setSize(600, 600);
 
         // Painel principal com BorderLayout
         JPanel panel = new JPanel(new BorderLayout());
@@ -31,84 +33,82 @@ public class Main extends JFrame {
         txtFiltro = new JTextField();
         btnFiltrar = new JButton("Filtrar");
 
-        // Adicionar o campo de texto e botão ao painel de filtro
-        filterPanel.add(txtFiltro, BorderLayout.CENTER);
-        filterPanel.add(btnFiltrar, BorderLayout.EAST);
+        livrosListModel = new DefaultListModel<>();
+        livrosList = new JList<>(livrosListModel);
+        livrosList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Adicionar o painel de filtro ao painel principal no norte
-        panel.add(filterPanel, BorderLayout.NORTH);
-
-        listModel = new DefaultListModel<>();
-        list = new JList<>(listModel);
-        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        list.setLayoutOrientation(JList.VERTICAL);
-        list.setVisibleRowCount(-1);
-        JScrollPane scrollPane = new JScrollPane(list);
-
-        // Adicionar o scrollPane ao painel principal no centro
+        JScrollPane scrollPane = new JScrollPane(livrosList);
         panel.add(scrollPane, BorderLayout.CENTER);
 
-        // Adicionar o painel principal ao frame
-        frame.add(panel);
+        JButton btnCarregarLivros = new JButton("Carregar Livros");
+        btnCarregarLivros.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                exibirLivros(consultarLivros());
+            }
+        });
+        panel.add(btnCarregarLivros, BorderLayout.SOUTH);
+
+        livrosList.addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                if (!e.getValueIsAdjusting()) {
+                    int selectedIndex = livrosList.getSelectedIndex();
+                    if (selectedIndex != -1) {
+                        Livro livroSelecionado = listaLivros.get(selectedIndex);
+                        exibirDetalhesLivro(livroSelecionado);
+                    }
+                }
+            }
+        });
 
         // Adiciona um listener para o botão de filtrar
         btnFiltrar.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 String filtro = txtFiltro.getText();
-                if (filtro.isEmpty()) {
-                    List<Livro> livrosOriginais = null;
-                    exibirLivros(livrosOriginais);
-                } else {
-                    List<Livro> livrosFiltrados = filtrarLivrosPorTitulo(Livro.consultarLivros(), filtro);
-                    exibirLivros(livrosFiltrados);
-                }
+                List<Livro> livrosFiltrados = filtrarLivrosPorTitulo(consultarLivros(), filtro);
+                exibirLivros(livrosFiltrados);
             }
         });
 
-        // Adiciona um listener para a seleção de item na lista
-        list.addListSelectionListener(e -> {
-            int selectedIndex = list.getSelectedIndex();
-            if (selectedIndex != -1) {
-                Livro livro = Livro.consultarLivros().get(selectedIndex);
-                exibirDetalhesLivro(livro);
+        // Botão para listar todos os livros
+        JButton btnListarTodos = new JButton("Listar Todos");
+        btnListarTodos.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                exibirLivros(consultarLivros());
             }
         });
+
+        // Adiciona o botão de listar todos no painel principal
+        panel.add(btnListarTodos, BorderLayout.SOUTH);
+
+        // Adiciona o campo de filtro e o botão no painel de filtro
+        filterPanel.add(txtFiltro, BorderLayout.CENTER);
+        filterPanel.add(btnFiltrar, BorderLayout.EAST);
+
+        // Adiciona o painel de filtro no painel principal
+        panel.add(filterPanel, BorderLayout.NORTH);
+
+
+
+        // Adiciona o painel principal ao frame
+        frame.add(panel);
 
         frame.setVisible(true);
     }
 
-
-    public void exibirDetalhesLivro(Livro livro) {
-        StringBuilder detalhes = new StringBuilder();
-        detalhes.append("ID: ").append(livro.getId()).append("\n");
-        detalhes.append("Título: ").append(livro.getTitulo()).append("\n");
-        detalhes.append("Descrição: ").append(livro.getDescricao()).append("\n");
-        detalhes.append("Preço: ").append(livro.getPreco()).append("\n");
-        detalhes.append("Autor: ").append(livro.getAutor());
-
-        JTextArea textArea = new JTextArea(detalhes.toString());
-        textArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(textArea);
-        scrollPane.setPreferredSize(new Dimension(300, 200));
-
-        JOptionPane.showMessageDialog(this, scrollPane, "Detalhes do Livro", JOptionPane.PLAIN_MESSAGE);
-    }
-
-
-
     public void exibirLivros(List<Livro> livros) {
-        listModel.clear();
+        listaLivros = livros;
+        livrosListModel.clear();
 
         for (Livro livro : livros) {
-            listModel.addElement(livro.getTitulo());
+            livrosListModel.addElement(livro.getTitulo());
         }
     }
-    public static List<Livro> filtrarLivrosPorTitulo(List<Livro> livros, String titulo) {
-        if(titulo.isEmpty()) {
-            return livros; //Retorna a lista original se o título estiver vazio
-        }
 
-        List<Livro> livrosFiltrados = new ArrayList();
+    public List<Livro> filtrarLivrosPorTitulo(List<Livro> livros, String titulo) {
+        List<Livro> livrosFiltrados = new ArrayList<>();
         for (Livro livro : livros) {
             if (livro.getTitulo().toLowerCase().contains(titulo.toLowerCase())) {
                 livrosFiltrados.add(livro);
@@ -117,16 +117,37 @@ public class Main extends JFrame {
         return livrosFiltrados;
     }
 
-    public static void main (String[]args){
+    public void exibirDetalhesLivro(Livro livro) {
+        StringBuilder detalhes = new StringBuilder();
+        detalhes.append("Título: \n").append(livro.getTitulo()).append("\n");
+        detalhes.append("Descrição: \n").append(livro.getDescricao()).append("\n");
+        detalhes.append("Preço: \n").append(livro.getPreco()).append("\n");
+        detalhes.append("Autor: \n").append(livro.getAutor());
+
+        Object[] options = { "Editar", "Excluir", "Fechar" };
+
+
+        int choice = JOptionPane.showOptionDialog(this, detalhes.toString(), "Detalhes do Livro",
+                JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[2]);
+
+        if (choice == 0) {
+
+            System.out.println("editar");
+        } else if (choice == 1) {
+            System.out.println("excluir");
+        }
+
+    }
+
+    public static void main(String[] args) {
         Main frame = new Main();
         frame.setVisible(true);
 
-        List<Livro> livrosOriginais;
-        livrosOriginais = Livro.consultarLivros();
-
         // Exibe todos os livros na inicialização
-        frame.exibirLivros(Livro.consultarLivros());
-
-
+        frame.exibirLivros(consultarLivros());
     }
 }
+
+
+
+
