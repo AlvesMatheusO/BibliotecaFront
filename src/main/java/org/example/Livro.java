@@ -8,8 +8,10 @@ import com.google.gson.JsonObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,6 +63,8 @@ public class Livro {
         this.autor = autor;
     }
 
+    private static List<Livro> listaLivros = new ArrayList<>();
+
     public static List<Livro> consultarLivros() {
         List<Livro> listaLivros = new ArrayList<>();
         try {
@@ -93,10 +97,10 @@ public class Livro {
             for (JsonElement elemento : jsonArray) {
                 JsonObject livroJson = elemento.getAsJsonObject();
                 long id = livroJson.get("id").getAsLong();
-                String titulo = livroJson.get("titulo").getAsString();
-                String descricao = livroJson.get("descricao").getAsString();
+                String titulo = livroJson.get("titulo").isJsonNull() ? null : livroJson.get("titulo").getAsString();
+                String descricao = livroJson.get("descricao").isJsonNull() ? null : livroJson.get("descricao").getAsString();
                 double preco = livroJson.get("preco").getAsDouble();
-                String autor = livroJson.get("autor").getAsString();
+                String autor = livroJson.get("autor").isJsonNull() ? null : livroJson.get("autor").getAsString();
 
                 // Cria um objeto Livro e adiciona-o à lista
                 Livro livro = new Livro();
@@ -107,6 +111,8 @@ public class Livro {
                 livro.setDescricao(descricao);
                 listaLivros.add(livro);
             }
+            setListaLivros(listaLivros);
+
 
             // Exibe a lista de livros
             for (Livro livro : listaLivros) {
@@ -135,7 +141,7 @@ public class Livro {
             URL url = new URL(apiUrl);
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
+    
             connection.setRequestMethod("GET");
 
             int responseCode = connection.getResponseCode();
@@ -183,7 +189,138 @@ public class Livro {
         return livrosFiltrados;
     }
 
+    private static final String API_URL = "http://localhost:8080/update/";
 
+    public static void editarLivro(Livro livro) throws IOException {
+        String apiUrl = API_URL + livro.getId();
+
+        URL url = new URL(apiUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("PUT");
+        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setDoOutput(true);
+
+        // Montar o JSON com os dados do livro a serem atualizados
+        String json = "{\"titulo\": \"" + livro.getTitulo() + "\", " +
+                "\"autor\": \"" + livro.getAutor() + "\", " +
+                "\"preco\": " + livro.getPreco() + "}";
+
+        // Enviar o JSON no corpo da requisição
+        try (OutputStream outputStream = connection.getOutputStream()) {
+            byte[] input = json.getBytes(StandardCharsets.UTF_8);
+            outputStream.write(input, 0, input.length);
+        }
+
+        // Obter a resposta da requisição
+        int statusCode = connection.getResponseCode();
+        if (statusCode == HttpURLConnection.HTTP_OK) {
+            // Livro atualizado com sucesso
+            System.out.println("Livro atualizado com sucesso!");
+
+
+
+            // Atualizar a lista de livros
+            listaLivros = consultarLivros();
+        } else {
+            // Erro ao atualizar o livro
+            try (BufferedReader errorReader = new BufferedReader(
+                    new InputStreamReader(connection.getErrorStream()))) {
+                StringBuilder errorMessage = new StringBuilder();
+                String line;
+                while ((line = errorReader.readLine()) != null) {
+                    errorMessage.append(line);
+                }
+                System.out.println("Erro ao atualizar o livro. Resposta da API: " + errorMessage.toString());
+            }
+        }
+
+        connection.disconnect();
+    }
+
+    public static void criarLivro(Livro livro) {
+        try {
+            String apiUrl = "http://localhost:8080/save";
+
+            URL url = new URL(apiUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setDoOutput(true);
+
+            // Verifica se os campos obrigatórios estão preenchidos
+            if (livro.getTitulo() == null || livro.getAutor() == null || livro.getDescricao() == null) {
+                System.out.println("Erro ao criar o livro. Campos obrigatórios não preenchidos.");
+                return;
+            }
+
+            // Monta o JSON com os dados do livro
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("titulo", livro.getTitulo());
+            jsonObject.addProperty("autor", livro.getAutor());
+            jsonObject.addProperty("preco", livro.getPreco());
+            jsonObject.addProperty("descricao", livro.getDescricao());
+
+            // Envia o JSON no corpo da requisição
+            try (OutputStream outputStream = connection.getOutputStream()) {
+                byte[] input = jsonObject.toString().getBytes(StandardCharsets.UTF_8);
+                outputStream.write(input, 0, input.length);
+            }
+
+            // Obtém a resposta da requisição
+            int statusCode = connection.getResponseCode();
+            if (statusCode == HttpURLConnection.HTTP_CREATED) {
+                // Livro criado com sucesso
+                System.out.println("Livro criado com sucesso!");
+            } else {
+                // Erro ao criar o livro
+                try (BufferedReader errorReader = new BufferedReader(
+                        new InputStreamReader(connection.getErrorStream()))) {
+                    StringBuilder errorMessage = new StringBuilder();
+                    String line;
+                    while ((line = errorReader.readLine()) != null) {
+                        errorMessage.append(line);
+                    }
+                    System.out.println("Erro ao criar o livro. Resposta da API: " + errorMessage.toString());
+                }
+            }
+
+            connection.disconnect();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void deletarLivro(long id) {
+        try {
+            String apiUrl = "http://localhost:8080/delete/" + id;
+
+            URL url = new URL(apiUrl);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("DELETE");
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
+                System.out.println("Livro deletado com sucesso!");
+            } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
+                System.out.println("Livro não encontrado.");
+            } else {
+                System.out.println("Erro ao deletar o livro. Código de resposta: " + responseCode);
+            }
+
+            connection.disconnect();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static List<Livro> getListaLivros() {
+        return listaLivros;
+    }
+
+    public static void setListaLivros(List<Livro> listaLivros) {
+        Livro.listaLivros = listaLivros;
+    }
 
 }
 
